@@ -464,8 +464,6 @@ func (s *Server) newIDToken(ctx context.Context, clientID string, claims storage
 		}
 	}
 
-	tok.CustomClaims = s.customClaims
-
 	tok.Audience = getAudience(clientID, scopes)
 	if len(tok.Audience) > 1 {
 		// The current client becomes the authorizing party.
@@ -478,6 +476,7 @@ func (s *Server) newIDToken(ctx context.Context, clientID string, claims storage
 		"sanitizeBucketName": sanitizeBucketName,
 	}
 
+	tok.CustomClaims = map[string]string{}
 	for k, templateText := range s.customClaims {
 		tmpl, err := template.New("custom_claims").Funcs(funcMap).Parse(templateText)
 		if err != nil {
@@ -487,7 +486,11 @@ func (s *Server) newIDToken(ctx context.Context, clientID string, claims storage
 		b := strings.Builder{}
 		tmpl.Execute(&b, tok)
 
-		tok.CustomClaims[k] = b.String()
+		if k == "preferred_username" {
+			tok.PreferredUsername = b.String()
+		} else {
+			tok.CustomClaims[k] = b.String()
+		}
 	}
 
 	payload, err := json.Marshal(tok)

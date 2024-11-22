@@ -187,7 +187,7 @@ jobs:
       - name: Generate build provenance attestation
         uses: actions/attest-build-provenance@210c1913531870065f03ce1f9440dd87bc0938cd # v1.4.0
         with:
-          subject-name: ghcr.io/dexidp/dex
+          subject-name: ghcr.io/salehkhazaei/dex
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
         if: inputs.publish
