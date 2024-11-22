@@ -76,7 +76,7 @@ jobs:
         with:
           images: |
             ${{ steps.image-name.outputs.value }}
-            dexidp/dex
+            ghcr.io/salehkhazaei/dex
           flavor: |
             latest = false
           tags: |
