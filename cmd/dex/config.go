@@ -145,6 +145,8 @@ type OAuth2 struct {
 	// If specified, do not prompt the user to approve client authorization. The
 	// act of logging in implies authorization.
 	SkipApprovalScreen bool `json:"skipApprovalScreen"`
+
+	CustomClaims map[string]string `json:"customClaims"`
 	// If specified, show the connector selection screen even if there's only one
 	AlwaysShowLoginScreen bool `json:"alwaysShowLoginScreen"`
 	// This is the connector that can be used for password grant

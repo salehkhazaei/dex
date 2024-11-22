@@ -17,8 +17,10 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/go-jose/go-jose/v4"
@@ -292,8 +294,9 @@ type idTokenClaims struct {
 
 	Groups []string `json:"groups,omitempty"`
 
-	Name              string `json:"name,omitempty"`
-	PreferredUsername string `json:"preferred_username,omitempty"`
+	Name              string            `json:"name,omitempty"`
+	PreferredUsername string            `json:"preferred_username,omitempty"`
+	CustomClaims      map[string]string `json:"custom_claims,omitempty"`
 
 	FederatedIDClaims *federatedIDClaims `json:"federated_claims,omitempty"`
 }
@@ -348,6 +351,33 @@ func genSubject(userID string, connID string) (string, error) {
 	}
 
 	return internal.Marshal(sub)
+}
+
+func sanitizeBucketName(name string) (string, error) {
+	// Trim leading and trailing spaces
+	name = strings.TrimSpace(name)
+
+	// Ensure the name is between 3 and 63 characters
+	if len(name) < 3 || len(name) > 63 {
+		return "", fmt.Errorf("bucket name must be between 3 and 63 characters")
+	}
+
+	// Replace non-lowercase letters and unsupported characters with a hyphen
+	re := regexp.MustCompile(`[^a-z0-9.-]`)
+	name = re.ReplaceAllString(name, "-")
+
+	// Ensure the name starts and ends with valid characters (lowercase letters or numbers)
+	if strings.HasPrefix(name, "-") || strings.HasPrefix(name, ".") {
+		name = "a" + name[1:]
+	}
+	if strings.HasSuffix(name, "-") || strings.HasSuffix(name, ".") {
+		name = name[:len(name)-1] + "a"
+	}
+
+	// Replace consecutive periods with a single period
+	name = strings.ReplaceAll(name, "..", ".")
+
+	return name, nil
 }
 
 func (s *Server) newIDToken(ctx context.Context, clientID string, claims storage.Claims, scopes []string, nonce, accessToken, code, connID string) (idToken string, expiry time.Time, err error) {
@@ -434,10 +464,30 @@ func (s *Server) newIDToken(ctx context.Context, clientID string, claims storage
 		}
 	}
 
+	tok.CustomClaims = s.customClaims
+
 	tok.Audience = getAudience(clientID, scopes)
 	if len(tok.Audience) > 1 {
 		// The current client becomes the authorizing party.
 		tok.AuthorizingParty = clientID
+	}
+
+	funcMap := template.FuncMap{
+		"dec":                func(i int) int { return i - 1 },
+		"replace":            strings.ReplaceAll,
+		"sanitizeBucketName": sanitizeBucketName,
+	}
+
+	for k, templateText := range s.customClaims {
+		tmpl, err := template.New("custom_claims").Funcs(funcMap).Parse(templateText)
+		if err != nil {
+			return "", expiry, err
+		}
+
+		b := strings.Builder{}
+		tmpl.Execute(&b, tok)
+
+		tok.CustomClaims[k] = b.String()
 	}
 
 	payload, err := json.Marshal(tok)

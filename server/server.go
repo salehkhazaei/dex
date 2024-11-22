@@ -94,6 +94,8 @@ type Config struct {
 	// Logging in implies approval.
 	SkipApprovalScreen bool
 
+	CustomClaims map[string]string
+
 	// If enabled, the connectors selection page will always be shown even if there's only one
 	AlwaysShowLoginScreen bool
 
@@ -177,6 +179,8 @@ type Server struct {
 
 	// If enabled, don't prompt user for approval after logging in through connector.
 	skipApproval bool
+
+	customClaims map[string]string
 
 	// If enabled, show the connector selection screen even if there's only one
 	alwaysShowLogin bool
@@ -308,6 +312,7 @@ func newServer(ctx context.Context, c Config, rotationStrategy rotationStrategy)
 		deviceRequestsValidFor: value(c.DeviceRequestsValidFor, 5*time.Minute),
 		refreshTokenPolicy:     c.RefreshTokenPolicy,
 		skipApproval:           c.SkipApprovalScreen,
+		customClaims:           c.CustomClaims,
 		alwaysShowLogin:        c.AlwaysShowLoginScreen,
 		now:                    now,
 		templates:              tmpls,
