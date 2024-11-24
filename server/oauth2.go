@@ -380,6 +380,20 @@ func sanitizeBucketName(name string) (string, error) {
 	return name, nil
 }
 
+func getS3Prefix(url string) string {
+	resp, err := http.Get(url)
+	if err != nil {
+		panic(err)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(body)
+}
+
 func (s *Server) newIDToken(ctx context.Context, clientID string, claims storage.Claims, scopes []string, nonce, accessToken, code, connID string) (idToken string, expiry time.Time, err error) {
 	keys, err := s.storage.GetKeys()
 	if err != nil {
@@ -474,6 +488,7 @@ func (s *Server) newIDToken(ctx context.Context, clientID string, claims storage
 		"dec":                func(i int) int { return i - 1 },
 		"replace":            strings.ReplaceAll,
 		"sanitizeBucketName": sanitizeBucketName,
+		"getS3Prefix":        getS3Prefix,
 	}
 
 	tok.CustomClaims = map[string]string{}
